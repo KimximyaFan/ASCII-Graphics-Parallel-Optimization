@@ -1,0 +1,70 @@
+
+바닥깔기
+array 기반으로 world 구성
+
+
+
+
+
+@@
+렌더링시 discrete 하게 반짝이는거 수정, smoothe 했으면 좋겠음
+
+@@
+game 구현시 AABB 쪽 생각하고 개선해보기, 현재는 entity mesh 둘다 local aabb 가지고있고
+이를 M 행렬로 변환해서 가져오는 형태임
+
+@@
+각종 함수 오버헤드나 불필요한 복사 있는지 점검
+
+@@
+여유되면 삼각형 그리는 방법 바라센트릭 vs 스캔라인 비교해서 analysis
+
+@@
+Clipper Clip Mesh 비효율적인거 최적화
+clipper.cc 파일의 clipmesh 함수 최적화 (나중에)
+
+@@
+renderer.cc 파일의 drawmesh 최적화 가능
+(deep copy 부분 capacity 재사용, reserve and 직접복사, std::transform, gpu programming )
+깊은 복사(deep copy)의 비용
+매 Draw 호출마다 Mesh out_mesh = mesh 로 벡터 데이터를 전부 복사하면,
+버텍스·인덱스 수가 많을수록 심각한 성능 저하를 유발합니다.
+
+@@
+컬링·드로우 루프 병합 (선택)
+순서를 재정렬하거나 추가 정렬이 필요 없으면, 컬링과 즉시 드로우를 한 루프에서 처리해도 됩니다.
+
+@@
+Renderer::Render(),
+MatrixConversion()에서 8개 코너 변환 대신 center/extent 식으로 AABB 변환 (연산 감소함)
+성능비교 테스트
+
+@@
+Color Blinn_Phong::Shade() 리팩토링 가능, 구현이 틀린건 아님
+
+@@
+한 가지 추가 고려사항
+이 구조는 specular도 vertex_color(알베도)에 곱하게 되므로, 
+하이라이트가 알베도 색으로 물드는 효과가 납니다.
+
+물리 기반 렌더링(PBR)이나 전통적인 Blinn–Phong 모델에서는, 
+보통 specular는 “하얀광” 혹은 material.specular_color로 취급하며 알베도와 독립적으로 처리합니다.
+
+만약 specular을 색상에 물들이지 않고 흰 광으로 남기고 싶다면,
+
+@@
+네, 대부분의 상용 엔진에서는 ambient(간접·전역 조명)도 반드시 알베도(기저 색상)와 곱해서 처리합니다.
+
+Unity의 경우, GI(글로벌 일루미네이션) 설정 문서에 “빛이 표면에서 반사(바운스)될 때, 
+반드시 그 표면의 알베도에 곱해진다”라고 명시하고 있습니다. 
+docs.unity3d.com
+
+물리 기반 렌더링(PBR) 일반 원리에서도, hemispherical ambient(반구형 환경광) 또는 
+environment irradiance를 계산한 뒤, 이를 기저 확산 반사율(albedo)과 곱해 
+최종 diffuse ambient 기여도를 구하는 방식이 표준입니다. 
+Alex Tardif의 PBR 가이드에서도 “hemispheric ambient light를 그 표면의 
+albedo(기저 확산 색상)에 곱한다”고 설명합니다. 
+alextardif.com
+
+즉, ambient term 계산 시에도 ambientColor * material.ambientCoef * albedo 형태로 
+알베도를 반드시 곱해 주는 것이 상용 엔진들의 공통된 처리 방식입니다

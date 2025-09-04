@@ -1,0 +1,27 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build & Run all .cc (PowerShell)",
+            "type": "shell",
+            "windows": {
+                "command": "powershell",
+                "args": [
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    "g++ -std=c++20 -Wall -Wextra -pedantic -I. (Get-ChildItem -Recurse -Filter *.cc | ForEach-Object { '\"' + $_.FullName + '\"' }) -o main.exe; if ($?) { ./main.exe }"
+                ]
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "빌드: 모든 .cc 파일 자동 검색 후 컴파일 & 실행"
+        }
+    ]
+}
