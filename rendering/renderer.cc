@@ -244,3 +244,99 @@ void Renderer::Render(const Scene& scene)
         }
     }
 }
+
+
+
+/*
+    Parallel
+*/
+
+Projected_Triangle Renderer::DrawMesh_Parallel (const std::vector<std::shared_ptr<Light>>& lights, 
+                         const Vec3& camera_pos,
+                         const Vec3& ambient,
+                         const Mesh& mesh,
+                         const Clipper& clipper,
+                         const Texture* texture, 
+                         Mat4x4 M, 
+                         Mat4x4 V, 
+                         Mat4x4 P
+                        )
+{
+    Mat4x4 PV = P * V;
+    Mat3x3 InverseTranspose_M = M.TopLeft3x3().InverseTranspose(); 
+    Mesh out_mesh = mesh;
+
+    // MC to WC
+    for (size_t i=0; i<out_mesh.vertices.size(); ++i)
+    {
+        out_mesh.vertices[i].position = M * out_mesh.vertices[i].position;
+        out_mesh.vertices[i].normal = Vec3::Normalize( InverseTranspose_M * out_mesh.vertices[i].normal );
+    }
+
+    out_mesh = clipper.BackFaceRemoval(out_mesh, V);
+
+    // Illumniation
+    for (size_t i=0; i<out_mesh.vertices.size(); ++i)
+    {
+        out_mesh.vertices[i].color = lighting_model->Shade(
+            out_mesh.vertices[i].position.ToVec3(),
+            out_mesh.vertices[i].normal,
+            camera_pos - out_mesh.vertices[i].position.ToVec3(),
+            *mesh.material,
+            lights,
+            out_mesh.vertices[i].color,
+            ambient
+        );
+    }
+
+    // Clipping
+    Mesh transformed_mesh = clipper.ClipMesh(out_mesh);
+
+    //Projection
+    for (auto& v : transformed_mesh.vertices)
+        v.position = PV * v.position;
+ 
+    for (size_t i=0; i+2<transformed_mesh.indices.size(); i+=3) 
+    {
+        RasterizeTriangle(transformed_mesh.vertices[transformed_mesh.indices[i+0]], 
+                          transformed_mesh.vertices[transformed_mesh.indices[i+1]], 
+                          transformed_mesh.vertices[transformed_mesh.indices[i+2]],
+                          texture);
+    }
+}
+
+void Renderer::Render_Parallel(const Scene& scene, int thread_count)
+{
+    ClearBuffers();
+
+    std::vector<std::shared_ptr<Light>> lights = scene.GetLightManager()->GetLights();
+
+    Vec3 ambient = scene.GetLightManager()->GetAmbient();
+
+    std::shared_ptr<Camera> camera = scene.GetCamera();
+
+    Mat4x4 V = camera->GetViewMatrix();
+
+    Mat4x4 P = camera->GetProjMatrix();
+
+    Vec3 view_direction = camera->GetViewDirection();
+
+    Vec3 camera_pos = camera->GetPosition();
+
+    Clipper clipper;
+    clipper.ExtractFrustumPlanes(P*V);
+
+    // AABB Culling
+    for ( auto& e : scene.GetEntities() )
+    {
+        AABB world_aabb = e->GetLocalAABB().MatrixConversion(e->GetLocalToWorldMatrix());
+
+        if ( clipper.IsAABBVisible(world_aabb) == false )
+            continue;
+
+        for ( auto& mesh : e->parts )
+        {
+            DrawMesh(lights, camera_pos, ambient, mesh, clipper, scene.GetTextureManager()->GetTexture(mesh.material->texture_handle), e->GetLocalToWorldMatrix(), V, P);
+        }
+    }
+}

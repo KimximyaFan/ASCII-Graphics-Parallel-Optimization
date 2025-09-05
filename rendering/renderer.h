@@ -39,6 +39,20 @@ public:
 
     void Render(const Scene& scene);
 
+    // Parallel
+
+    Projected_Triangle DrawMesh_Parallel (const std::vector<std::shared_ptr<Light>>& lights, 
+                   const Vec3& camaera_pos,
+                   const Vec3& ambient,
+                   const Mesh& mesh,
+                   const Clipper& clipper,
+                   const Texture* texture,
+                   Mat4x4 M, 
+                   Mat4x4 V, 
+                   Mat4x4 P);
+
+    void Render_Parallel(const Scene& scene, int thread_count);
+
 private:
     int width, height;
     Mat4x4 viewport_matrix;
