@@ -10,6 +10,7 @@
 #include "scene/scene.h"
 #include "culling/clipper.h"
 #include "material/texture.h"
+#include "tile.h"
 
 class Renderer
 {
@@ -17,11 +18,33 @@ public:
     static const Color clear_color;
     static const float clear_depth;
 
-    Renderer (int width, int height);
+    Renderer (int width, int height, int tile_w, int tile_h);
 
     void ClearBuffers ();
 
     void SetLightingModel (std::unique_ptr<Lighting_Model> lighting);
+
+    const std::vector<Color>& GetFrameBuffer () const;
+
+    const std::vector<float>& GetZBuffer () const;
+
+    void Render(const Scene& scene);
+
+    void Render_Parallel(const Scene& scene, int thread_count);
+
+private:
+    int width, height;
+    Mat4x4 viewport_matrix;
+    std::vector<Color> frame_buffer;
+    std::vector<float> z_buffer;
+    std::unique_ptr<Lighting_Model> lighting_model;
+    std::vector<Tile> tiles;
+
+    Projected_Vertex ProjectVertex (const Vertex& v);
+
+    inline float GetTriangleSpace (const Projected_Vertex& A, const Projected_Vertex& B, const Projected_Vertex& C);
+
+    void RasterizeTriangle (const Vertex& v0, const Vertex& v1, const Vertex& v2, const Texture* texture);
 
     void DrawMesh (const std::vector<std::shared_ptr<Light>>& lights, 
                    const Vec3& camaera_pos,
@@ -33,13 +56,9 @@ public:
                    Mat4x4 V, 
                    Mat4x4 P);
 
-    const std::vector<Color>& GetFrameBuffer () const;
+    void MakeTiles(int tile_w, int tile_h);
 
-    const std::vector<float>& GetZBuffer () const;
-
-    void Render(const Scene& scene);
-
-    // Parallel
+    void RasterizeTriangle_Parallel (std::vector<std::vector<Projected_Triangle>>& triangles, const Texture* texture);
 
     Projected_Triangle DrawMesh_Parallel (const std::vector<std::shared_ptr<Light>>& lights, 
                    const Vec3& camaera_pos,
@@ -49,20 +68,7 @@ public:
                    const Texture* texture,
                    Mat4x4 M, 
                    Mat4x4 V, 
-                   Mat4x4 P);
-
-    void Render_Parallel(const Scene& scene, int thread_count);
-
-private:
-    int width, height;
-    Mat4x4 viewport_matrix;
-    std::vector<Color> frame_buffer;
-    std::vector<float> z_buffer;
-    std::unique_ptr<Lighting_Model> lighting_model;
-
-    Projected_Vertex ProjectVertex (const Vertex& v);
-
-    inline float GetTriangleSpace (const Projected_Vertex& A, const Projected_Vertex& B, const Projected_Vertex& C);
-
-    void RasterizeTriangle (const Vertex& v0, const Vertex& v1, const Vertex& v2, const Texture* texture);
+                   Mat4x4 P,
+                   int tid,
+                   std::vector<std::vector<Projected_Triangle>>& triangles );
 };

@@ -7,11 +7,16 @@
 const Color Renderer::clear_color = {0, 0, 0, 0};
 const float Renderer::clear_depth = 1.0f;
 
-Renderer::Renderer (int w, int h)
+inline int Ceil_Div(int a, int b) { return (a + b - 1) / b; }
+
+Renderer::Renderer (int w, int h, int tile_w, int tile_h)
     : width(w), height(h),
     frame_buffer(w*h),
-    z_buffer(w*h) 
-    { viewport_matrix = Mat4x4::ViewportTransformation(0, w, 0, h); }
+    z_buffer(w*h)
+    { 
+        viewport_matrix = Mat4x4::ViewportTransformation(0, w, 0, h);
+        MakeTiles(tile_w, tile_h);
+    }
 
 const std::vector<Color>& Renderer::GetFrameBuffer () const
 {
@@ -21,6 +26,30 @@ const std::vector<Color>& Renderer::GetFrameBuffer () const
 const std::vector<float>& Renderer::GetZBuffer () const
 {
     return z_buffer;
+}
+
+void Renderer::MakeTiles(int tile_w, int tile_h)
+{
+    tiles.clear();
+
+    int tile_grid_width = Ceil_Div(width, tile_w);
+    int tile_grid_height = Ceil_Div(height, tile_h);
+    int id = 0;
+
+    tiles.reserve(tile_grid_width * tile_grid_height);
+
+    for (int j=0; j<tile_grid_height; ++j)
+    {
+        for (int i=0; i<tile_grid_width; ++i)
+        {
+            int x0 = i * tile_w;
+            int y0 = j * tile_h;
+            int x1 = std::min(x0 + tile_w, width);
+            int y1 = std::min(y0 + tile_h, height);
+
+            tiles.push_back( Tile{ x0, y0, x1, y1, id++ } );
+        }
+    }
 }
 
 void Renderer::ClearBuffers ()
@@ -143,10 +172,6 @@ void Renderer::RasterizeTriangle (const Vertex& v0, const Vertex& v1, const Vert
 
 /*
 
-조명·컬링·노멀 같은 “뷰 공간 로직”은 MV를, 
-클립·래스터 같은 “투영 이후 로직”은 MVP를 씁니다. 
-필요한 처리에 따라 둘 다 갖고 있는 게 가장 유연
-
 M = MC to WC
 V = WC to VC
 P = VC to projection 
@@ -251,6 +276,16 @@ void Renderer::Render(const Scene& scene)
     Parallel
 */
 
+void Renderer::RasterizeTriangle_Parallel (std::vector<std::vector<Projected_Triangle>>& triangles, const Texture* texture)
+{
+    // 타일 나누기
+
+    // 타일별로 삼각형 인덱스 할당
+
+    // shared counter 방식으로 각 쓰레드들이 타일 받아서 레스터라이즈 실행
+
+}
+
 Projected_Triangle Renderer::DrawMesh_Parallel (const std::vector<std::shared_ptr<Light>>& lights, 
                          const Vec3& camera_pos,
                          const Vec3& ambient,
@@ -259,7 +294,9 @@ Projected_Triangle Renderer::DrawMesh_Parallel (const std::vector<std::shared_pt
                          const Texture* texture, 
                          Mat4x4 M, 
                          Mat4x4 V, 
-                         Mat4x4 P
+                         Mat4x4 P,
+                         int tid,
+                         std::vector<std::vector<Projected_Triangle>>& triangles
                         )
 {
     Mat4x4 PV = P * V;
@@ -292,16 +329,20 @@ Projected_Triangle Renderer::DrawMesh_Parallel (const std::vector<std::shared_pt
     // Clipping
     Mesh transformed_mesh = clipper.ClipMesh(out_mesh);
 
+    auto& vector = triangles[tid];
+
     //Projection
     for (auto& v : transformed_mesh.vertices)
         v.position = PV * v.position;
  
     for (size_t i=0; i+2<transformed_mesh.indices.size(); i+=3) 
     {
-        RasterizeTriangle(transformed_mesh.vertices[transformed_mesh.indices[i+0]], 
-                          transformed_mesh.vertices[transformed_mesh.indices[i+1]], 
-                          transformed_mesh.vertices[transformed_mesh.indices[i+2]],
-                          texture);
+        Projected_Triangle triangle { ProjectVertex(transformed_mesh.vertices[transformed_mesh.indices[i+0]]),
+                                      ProjectVertex(transformed_mesh.vertices[transformed_mesh.indices[i+1]]),
+                                      ProjectVertex(transformed_mesh.vertices[transformed_mesh.indices[i+2]])};
+
+        vector.push_back(triangle);
+
     }
 }
 
@@ -326,6 +367,10 @@ void Renderer::Render_Parallel(const Scene& scene, int thread_count)
     Clipper clipper;
     clipper.ExtractFrustumPlanes(P*V);
 
+    std::vector<std::vector<Projected_Triangle>> triangles;
+
+    int tid = 0;
+
     // AABB Culling
     for ( auto& e : scene.GetEntities() )
     {
@@ -336,7 +381,17 @@ void Renderer::Render_Parallel(const Scene& scene, int thread_count)
 
         for ( auto& mesh : e->parts )
         {
-            DrawMesh(lights, camera_pos, ambient, mesh, clipper, scene.GetTextureManager()->GetTexture(mesh.material->texture_handle), e->GetLocalToWorldMatrix(), V, P);
+            DrawMesh_Parallel(lights, 
+                camera_pos, 
+                ambient, 
+                mesh, 
+                clipper, 
+                scene.GetTextureManager()->GetTexture(mesh.material->texture_handle), 
+                e->GetLocalToWorldMatrix(), 
+                V, 
+                P,
+                tid,
+                triangles);
         }
     }
 }
