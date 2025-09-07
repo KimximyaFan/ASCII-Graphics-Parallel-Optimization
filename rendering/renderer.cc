@@ -10,7 +10,7 @@ const float Renderer::clear_depth = 1.0f;
 inline int Ceil_Div(int a, int b) { return (a + b - 1) / b; }
 
 Renderer::Renderer (int w, int h, int tile_w, int tile_h)
-    : width(w), height(h),
+    : width(w), height(h), tile_w(tile_w), tile_h(tile_h),
     frame_buffer(w*h),
     z_buffer(w*h)
     { 
@@ -32,8 +32,8 @@ void Renderer::MakeTiles(int tile_w, int tile_h)
 {
     tiles.clear();
 
-    int tile_grid_width = Ceil_Div(width, tile_w);
-    int tile_grid_height = Ceil_Div(height, tile_h);
+    tile_grid_width = Ceil_Div(width, tile_w);
+    tile_grid_height = Ceil_Div(height, tile_h);
     int id = 0;
 
     tiles.reserve(tile_grid_width * tile_grid_height);
@@ -276,28 +276,150 @@ void Renderer::Render(const Scene& scene)
     Parallel
 */
 
-void Renderer::RasterizeTriangle_Parallel (std::vector<std::vector<Projected_Triangle>>& triangles, const Texture* texture)
+Bounding_Box Renderer::GetTriangleBoundingBox(const Projected_Triangle& T)
 {
-    // 타일 나누기
+    float minx = std::min({T.v0.x, T.v1.x, T.v2.x});
+    float maxx = std::max({T.v0.x, T.v1.x, T.v2.x});
+    float miny = std::min({T.v0.y, T.v1.y, T.v2.y});
+    float maxy = std::max({T.v0.y, T.v1.y, T.v2.y});
 
-    // 타일별로 삼각형 인덱스 할당
+    // 픽셀 센터 격자와 정합: -0.5 시프트 후 ceil/floor
+    int x0 = std::clamp((int)std::ceil (minx - 0.5f), 0, width);
+    int x1 = std::clamp((int)std::floor(maxx - 0.5f) + 1, 0, width);
+    int y0 = std::clamp((int)std::ceil (miny - 0.5f), 0, height);
+    int y1 = std::clamp((int)std::floor(maxy - 0.5f) + 1, 0, height);
 
-    // shared counter 방식으로 각 쓰레드들이 타일 받아서 레스터라이즈 실행
+    return { x0, y0, x1, y1 };
+}
+
+void Renderer::TriangleIntoTileBin(const Projected_Triangle& T, int tid, int index)
+{
+    Bounding_Box box = GetTriangleBoundingBox(T);
+
+    if (box.x0 >= box.x1 || box.y0 >= box.y1) return;
+
+    int tx0 = box.x0 / tile_w;
+    int ty0 = box.y0 / tile_h;
+    int tx1 = (box.x1 - 1) / tile_w;
+    int ty1 = (box.y1 - 1) / tile_h;
+
+    for (int j=ty0; j<=ty1; ++j)
+    {
+        for (int i=tx0; i<=tx1; ++i)
+        {
+            int tile_x0 = i * tile_w;
+            int tile_y0 = j * tile_h;
+            int tile_x1 = std::min(tile_x0 + tile_w, width);
+            int tile_y1 = std::min(tile_y0 + tile_h, height);
+
+            int ix0 = std::max(box.x0, tile_x0);
+            int iy0 = std::max(box.y0, tile_y0);
+            int ix1 = std::min(box.x1, tile_x1);
+            int iy1 = std::min(box.y1, tile_y1);
+
+            if ( ix0 >= ix1 || iy0 >= iy1 ) continue;
+
+            tile_bins[j*tile_grid_width + i].push_back(
+                Triangle_Reference{tid, index, ix0, iy0, ix1, iy1}
+            );
+        }
+    } 
+}
+
+void Renderer::AllocateTriangle()
+{
+    for (int tid=0; tid<(int)triangles.size(); ++tid)
+    {
+        auto& triangle_vec = triangles[tid];
+
+        for (int index=0; index<(int)triangle_vec.size(); ++index)
+            TriangleIntoTileBin(triangle_vec[index], tid, index);
+    }
+}
+
+void Renderer::DrawTile(const Tile& t, const Texture* texture)
+{
+    auto& bin = tile_bins[t.id];
+
+    Projected_Vertex P;
+
+    for (const Triangle_Reference& ref : bin)
+    {
+        const Projected_Triangle& tri = triangles[ref.tid][ref.index];
+        const Projected_Vertex& A = tri.v0;
+        const Projected_Vertex& B = tri.v1;
+        const Projected_Vertex& C = tri.v2;
+        
+        float area = GetTriangleSpace(A, B, C);
+
+        if (fabs(area) < 1e-6f) continue;
+
+        float orient = area > 0.0f ? 1.0f : -1.0f;
+        area *= orient;
+
+        const float inv_area = 1.0f/area;
+
+        for (int y=ref.y0; y<ref.y1; ++y)
+        {
+            P.y = y + 0.5f;
+
+            for (int x=ref.x0; x<ref.x1; ++x)
+            {
+                P.x = x + 0.5f;
+
+                float w0 = orient * GetTriangleSpace(B, C, P) * inv_area;
+                float w1 = orient * GetTriangleSpace(C, A, P) * inv_area;
+                float w2 = orient * GetTriangleSpace(A, B, P) * inv_area;
+
+                if ( w0 < 0.0f || w1 < 0.0f || w2 < 0.0f ) continue;
+
+                float z = w0*A.z + w1*B.z + w2*C.z;
+
+                size_t index = y*width + x;
+
+                if ( z >= z_buffer[index] ) continue;
+
+                float denom = w0*A.invW + w1*B.invW + w2*C.invW;
+
+                if (!std::isfinite(denom) || std::fabs(denom) < 1e-12f) continue;
+                
+                float u = (w0*A.u_over_w + w1*B.u_over_w + w2*C.u_over_w) / denom;
+                float v = (w0*A.v_over_w + w1*B.v_over_w + w2*C.v_over_w) / denom;
+
+                Color tex = texture ? texture->Sample(u, v) : Color{1,1,1,1};
+                
+                Color col;
+                col.r = (w0*A.r_over_w + w1*B.r_over_w + w2*C.r_over_w) / denom;
+                col.g = (w0*A.g_over_w + w1*B.g_over_w + w2*C.g_over_w) / denom;
+                col.b = (w0*A.b_over_w + w1*B.b_over_w + w2*C.b_over_w) / denom;
+                col.a = 1.0f;
+
+                Color out = col * tex;
+                
+                z_buffer[index] = z;
+                frame_buffer[index] = out;
+            }
+        }
+    }
+}
+
+void Renderer::RasterizeTriangle_Parallel(const Texture* texture)
+{
 
 }
 
-Projected_Triangle Renderer::DrawMesh_Parallel (const std::vector<std::shared_ptr<Light>>& lights, 
-                         const Vec3& camera_pos,
-                         const Vec3& ambient,
-                         const Mesh& mesh,
-                         const Clipper& clipper,
-                         const Texture* texture, 
-                         Mat4x4 M, 
-                         Mat4x4 V, 
-                         Mat4x4 P,
-                         int tid,
-                         std::vector<std::vector<Projected_Triangle>>& triangles
-                        )
+Projected_Triangle Renderer::DrawMesh_Parallel (
+    const std::vector<std::shared_ptr<Light>>& lights, 
+    const Vec3& camera_pos,
+    const Vec3& ambient,
+    const Mesh& mesh,
+    const Clipper& clipper,
+    const Texture* texture, 
+    Mat4x4 M, 
+    Mat4x4 V, 
+    Mat4x4 P,
+    int tid
+)
 {
     Mat4x4 PV = P * V;
     Mat3x3 InverseTranspose_M = M.TopLeft3x3().InverseTranspose(); 
@@ -367,7 +489,10 @@ void Renderer::Render_Parallel(const Scene& scene, int thread_count)
     Clipper clipper;
     clipper.ExtractFrustumPlanes(P*V);
 
-    std::vector<std::vector<Projected_Triangle>> triangles;
+    triangles.resize(thread_count);
+
+    // 각타일의 벡터에 대해서 vector growth 최적화 가능해보임
+    tile_bins.assign(tiles.size(), {});
 
     int tid = 0;
 
@@ -381,7 +506,8 @@ void Renderer::Render_Parallel(const Scene& scene, int thread_count)
 
         for ( auto& mesh : e->parts )
         {
-            DrawMesh_Parallel(lights, 
+            DrawMesh_Parallel(
+                lights, 
                 camera_pos, 
                 ambient, 
                 mesh, 
@@ -390,8 +516,10 @@ void Renderer::Render_Parallel(const Scene& scene, int thread_count)
                 e->GetLocalToWorldMatrix(), 
                 V, 
                 P,
-                tid,
-                triangles);
+                tid
+            );
         }
     }
+
+    AllocateTriangle();
 }

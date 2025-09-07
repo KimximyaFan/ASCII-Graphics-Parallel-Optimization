@@ -5,12 +5,11 @@
 #include "geometry/primitive.h"
 #include "math/matrix.h"
 #include "material/color.h"
-#include "geometry/projected_vertex.h"
+#include "geometry/rendering_struct.h"
 #include "light_models/lighting_model.h"
 #include "scene/scene.h"
 #include "culling/clipper.h"
 #include "material/texture.h"
-#include "tile.h"
 
 class Renderer
 {
@@ -33,12 +32,14 @@ public:
     void Render_Parallel(const Scene& scene, int thread_count);
 
 private:
-    int width, height;
+    int width, height, tile_w, tile_h, tile_grid_width, tile_grid_height;
     Mat4x4 viewport_matrix;
     std::vector<Color> frame_buffer;
     std::vector<float> z_buffer;
     std::unique_ptr<Lighting_Model> lighting_model;
     std::vector<Tile> tiles;
+    std::vector<std::vector<Triangle_Reference>> tile_bins;
+    std::vector<std::vector<Projected_Triangle>> triangles;
 
     Projected_Vertex ProjectVertex (const Vertex& v);
 
@@ -58,7 +59,15 @@ private:
 
     void MakeTiles(int tile_w, int tile_h);
 
-    void RasterizeTriangle_Parallel (std::vector<std::vector<Projected_Triangle>>& triangles, const Texture* texture);
+    Bounding_Box GetTriangleBoundingBox (const Projected_Triangle& triangle);
+
+    void TriangleIntoTileBin(const Projected_Triangle& triangle, int tid, int index);
+
+    void AllocateTriangle();
+
+    void DrawTile(const Tile& t, const Texture* texture);
+
+    void RasterizeTriangle_Parallel (const Texture* texture);
 
     Projected_Triangle DrawMesh_Parallel (const std::vector<std::shared_ptr<Light>>& lights, 
                    const Vec3& camaera_pos,
@@ -69,6 +78,5 @@ private:
                    Mat4x4 M, 
                    Mat4x4 V, 
                    Mat4x4 P,
-                   int tid,
-                   std::vector<std::vector<Projected_Triangle>>& triangles );
+                   int tid );
 };
