@@ -18,7 +18,7 @@ struct Task
 class Thread_Pool
 {
 public:
-    explicit Thread_Pool(int thd_count);
+    explicit Thread_Pool(int thd_count, int queue_capacity);
     ~Thread_Pool();
 
     Task GetTask();
@@ -29,11 +29,11 @@ private:
     int thread_count;
     std::vector<std::thread> workers;
 
-    std::vector<Task> task_queue;
     const size_t q_capacity = 100;
     size_t q_head;
     size_t q_tail;
     size_t q_size;
+    std::vector<Task> task_queue;
 
     std::mutex mutex;
     std::condition_variable not_empty;

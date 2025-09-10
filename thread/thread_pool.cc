@@ -1,17 +1,31 @@
 #include "thread_pool.h"
 
 
-Thread_Pool::Thread_Pool(int thd_count) : thread_count(thd_count)
+Thread_Pool::Thread_Pool(int thd_count, int capacity) 
+: thread_count(thd_count > 0 ? thd_count : 1),
+q_capacity(capacity > 0 ? capacity : 1024),
+task_queue(q_capacity)
 {
-    if (thread_count <= 0) 
-        thread_count = 1;
-
     workers.reserve(thread_count);
 
     for (int tid = 0; tid < thread_count; ++tid)
+        workers.emplace_back(&Thread_Pool::WorkerLoop, this, tid);
+}
+
+Thread_Pool::~Thread_Pool()
+{
     {
-        
+        std::lock_guard<std::mutex> lock_guard(mutex);
+        stopping = true;
     }
+    
+
+    not_empty.notify_all();
+    not_full.notify_all();
+    done.notify_all();
+
+    for (auto& thread : workers)
+        thread.join();
 }
 
 Task Thread_Pool::GetTask()
@@ -29,8 +43,10 @@ void Thread_Pool::WorkerLoop(int tid)
     while(true)
     {
         while (q_size == 0 && stopping == false)
+        {
             not_empty.wait(lock);
-
+        }
+            
         if (stopping == true && q_size == 0)
             break;
 
