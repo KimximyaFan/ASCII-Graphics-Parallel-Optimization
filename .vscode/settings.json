@@ -57,7 +57,9 @@
     "sstream": "cpp",
     "semaphore": "cpp",
     "stop_token": "cpp",
-    "thread": "cpp"
+    "thread": "cpp",
+    "condition_variable": "cpp",
+    "mutex": "cpp"
   },
 
   "code-runner.runInTerminal": true,

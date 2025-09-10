@@ -19,6 +19,10 @@ int main(int argc, char* argv[])
 {
     const int width  = 120;
     const int height = 30;
+    const int tile_w = 10;
+    const int tile_h = 5;
+
+    const int number_of_thread = 2;
 
     Scene scene;
 
@@ -79,7 +83,7 @@ int main(int argc, char* argv[])
 
     camera->SetPosition(world_info[0]->transform.position);
  
-    Renderer renderer(width, height);
+    Renderer renderer(width, height, tile_w, tile_h);
     renderer.SetLightingModel(std::make_unique<Blinn_Phong>());
 
     Output_Handler output_handler(width, height);

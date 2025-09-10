@@ -408,7 +408,7 @@ void Renderer::RasterizeTriangle_Parallel(const Texture* texture)
 
 }
 
-Projected_Triangle Renderer::DrawMesh_Parallel (
+void Renderer::DrawMesh_Parallel (
     const std::vector<std::shared_ptr<Light>>& lights, 
     const Vec3& camera_pos,
     const Vec3& ambient,
@@ -494,16 +494,22 @@ void Renderer::Render_Parallel(const Scene& scene, int thread_count)
     // 각타일의 벡터에 대해서 vector growth 최적화 가능해보임
     tile_bins.assign(tiles.size(), {});
 
+    draw_list.clear();
+
     int tid = 0;
 
     // AABB Culling
-    for ( auto& e : scene.GetEntities() )
+    for (auto& e : scene.GetEntities() )
     {
         AABB world_aabb = e->GetLocalAABB().MatrixConversion(e->GetLocalToWorldMatrix());
 
-        if ( clipper.IsAABBVisible(world_aabb) == false )
-            continue;
+        if ( clipper.IsAABBVisible(world_aabb) == true )
+            draw_list.push_back(e);
+    }
 
+
+    for ( auto& e : draw_list )
+    {
         for ( auto& mesh : e->parts )
         {
             DrawMesh_Parallel(

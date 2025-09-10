@@ -40,6 +40,7 @@ private:
     std::vector<Tile> tiles;
     std::vector<std::vector<Triangle_Reference>> tile_bins;
     std::vector<std::vector<Projected_Triangle>> triangles;
+    std::vector<std::shared_ptr<Entity>> draw_list;
 
     Projected_Vertex ProjectVertex (const Vertex& v);
 
@@ -69,7 +70,7 @@ private:
 
     void RasterizeTriangle_Parallel (const Texture* texture);
 
-    Projected_Triangle DrawMesh_Parallel (const std::vector<std::shared_ptr<Light>>& lights, 
+    void DrawMesh_Parallel (const std::vector<std::shared_ptr<Light>>& lights, 
                    const Vec3& camaera_pos,
                    const Vec3& ambient,
                    const Mesh& mesh,
