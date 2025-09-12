@@ -5,10 +5,10 @@ void Fps_Counter::Start()
 {
     frame_count = 0;
     elapsed_time = 0;
-    start_time = TimeStamp();
+    start_time = TimeStamp() - 1;
 }
 
-int Fps_Counter::Get_Fps()
+unsigned long long Fps_Counter::Get_Fps()
 {
     ++frame_count;
 

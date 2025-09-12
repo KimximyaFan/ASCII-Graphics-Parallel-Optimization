@@ -29,15 +29,25 @@ const float Renderer::clear_depth = 1.0f;
 
 inline int Ceil_Div(int a, int b) { return (a + b - 1) / b; }
 
-Renderer::Renderer (int w, int h, int tile_w, int tile_h, Thread_Pool& pool)
-    : width(w), height(h), tile_w(tile_w), tile_h(tile_h),
-    frame_buffer(w*h),
-    z_buffer(w*h),
-    thread_pool(pool)
-    { 
-        viewport_matrix = Mat4x4::ViewportTransformation(0, w, 0, h);
-        MakeTiles(tile_w, tile_h);
-    }
+Renderer::Renderer (int w, int h, int tile_w, int tile_h, Thread_Pool* pool)
+: width(w), height(h), tile_w(tile_w), tile_h(tile_h),
+frame_buffer(w*h),
+z_buffer(w*h),
+thread_pool(pool)
+{ 
+    viewport_matrix = Mat4x4::ViewportTransformation(0, w, 0, h);
+    MakeTiles(tile_w, tile_h);
+}
+
+Renderer::Renderer (int w, int h, int tile_w, int tile_h)
+: width(w), height(h), tile_w(tile_w), tile_h(tile_h),
+frame_buffer(w*h),
+z_buffer(w*h)
+{ 
+    viewport_matrix = Mat4x4::ViewportTransformation(0, w, 0, h);
+    MakeTiles(tile_w, tile_h);
+    thread_pool = nullptr;
+}
 
 const std::vector<Color>& Renderer::GetFrameBuffer () const
 {
@@ -47,6 +57,14 @@ const std::vector<Color>& Renderer::GetFrameBuffer () const
 const std::vector<float>& Renderer::GetZBuffer () const
 {
     return z_buffer;
+}
+
+void Renderer::Render(const Scene& scene)
+{
+    if ( thread_pool )
+        Render_Parallel(scene);
+    else
+        Render_Single(scene);
 }
 
 void Renderer::MakeTiles(int tile_w, int tile_h)
@@ -255,7 +273,7 @@ void Renderer::DrawMesh (const std::vector<std::shared_ptr<Light>>& lights,
     }
 }
 
-void Renderer::Render(const Scene& scene)
+void Renderer::Render_Single(const Scene& scene)
 {
     ClearBuffers();
 
@@ -529,7 +547,7 @@ void Renderer::Render_Parallel(const Scene& scene)
     Clipper clipper;
     clipper.ExtractFrustumPlanes(P*V);
 
-    triangles.resize(thread_pool.GetThreadCount());
+    triangles.resize(thread_pool->GetThreadCount());
     for (auto& vec : triangles) vec.clear();
 
     // 각타일의 벡터에 대해서 vector growth 최적화 가능해보임
@@ -571,12 +589,12 @@ void Renderer::Render_Parallel(const Scene& scene)
                 P
             });
 
-            thread_pool.PushTask(&DrawMeshJob, &draw_mesh_ctxs.back());
+            thread_pool->PushTask(&DrawMeshJob, &draw_mesh_ctxs.back());
         }
     }
 
-    thread_pool.Start();
-    thread_pool.Wait();
+    thread_pool->Start();
+    thread_pool->Wait();
 
     AllocateTriangle();
 
@@ -590,9 +608,9 @@ void Renderer::Render_Parallel(const Scene& scene)
             t
         });
 
-        thread_pool.PushTask(&DrawTileJob, &draw_tile_ctxs.back());
+        thread_pool->PushTask(&DrawTileJob, &draw_tile_ctxs.back());
     }
 
-    thread_pool.Start();
-    thread_pool.Wait();
+    thread_pool->Start();
+    thread_pool->Wait();
 }

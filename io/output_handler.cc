@@ -6,7 +6,7 @@
 Output_Handler::Output_Handler(int w, int h) 
 : width(w), height(h), hConsole(GetStdHandle(STD_OUTPUT_HANDLE)) {}
 
-void Output_Handler::PrintBuffer(const std::vector<Color>& frame_buffer, int fps)
+void Output_Handler::PrintBuffer(const std::vector<Color>& frame_buffer, unsigned long long fps)
 {
     char buf[height+2][width];
 

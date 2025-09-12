@@ -10,7 +10,7 @@ public:
 
     void Start();
 
-    int Get_Fps ();
+    unsigned long long Get_Fps ();
 
 private:
     unsigned long long frame_count;

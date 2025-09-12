@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     const int tile_w = 10;
     const int tile_h = 5;
 
-    const int number_of_thread = 2;
+    const int thread_count = 1;
     const int q_capacity = 1024;
 
     Scene scene;
@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
     /*
     std::shared_ptr<Entity> entity;
     
-    if (true) 
+    if (true)
         entity = CreateCubeEntity_Flat24_Fixed(5.0f);
     else
         entity = CreateCubeEntity_Fla t24_Debug(5.0f);
@@ -85,18 +85,23 @@ int main(int argc, char* argv[])
 
     camera->SetPosition(world_info[0]->transform.position);
     
-    Thread_Pool thread_pool(number_of_thread, q_capacity);
+    std::unique_ptr<Thread_Pool> thread_pool = nullptr;
 
-    Renderer renderer(width, height, tile_w, tile_h, thread_pool);
+    if ( thread_count >= 2 )
+        thread_pool = std::make_unique<Thread_Pool>(thread_count, q_capacity);
+
+    Renderer renderer(width, height, tile_w, tile_h, thread_pool.get());
+
     renderer.SetLightingModel(std::make_unique<Blinn_Phong>());
 
     Output_Handler output_handler(width, height);
 
     Fps_Counter fps_counter;
-    fps_counter.Start();  
-
+    fps_counter.Start();
+ 
     auto lastTime = std::chrono::high_resolution_clock::now();
-
+    unsigned long long fps = 0;
+ 
     while ( true )
     {
         auto now   = std::chrono::high_resolution_clock::now();
@@ -106,10 +111,14 @@ int main(int argc, char* argv[])
         input_handler->Poll();
         if (input_handler->IsKeyDown(Key::SPACE)) break;
         camera_controller->Update(dt);
-
         renderer.Render(scene);
-        output_handler.PrintBuffer(renderer.GetFrameBuffer(), fps_counter.Get_Fps());
+        output_handler.PrintBuffer(renderer.GetFrameBuffer(), fps);
+        fps = fps_counter.Get_Fps();
     }
 
-    thread_pool.Stop();
+    if ( thread_count >= 2) {
+        thread_pool->Stop();
+        printf("thread clear");
+    }
+        
 }

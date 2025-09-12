@@ -18,7 +18,8 @@ public:
     static const Color clear_color;
     static const float clear_depth;
 
-    Renderer (int width, int height, int tile_w, int tile_h, Thread_Pool& pool);
+    Renderer (int width, int height, int tile_w, int tile_h);
+    Renderer (int width, int height, int tile_w, int tile_h, Thread_Pool* pool);
 
     void ClearBuffers ();
 
@@ -30,14 +31,12 @@ public:
 
     void Render(const Scene& scene);
 
-    void Render_Parallel(const Scene& scene);
-
 private:
-    Thread_Pool& thread_pool;
     int width, height, tile_w, tile_h, tile_grid_width, tile_grid_height;
     Mat4x4 viewport_matrix;
     std::vector<Color> frame_buffer;
     std::vector<float> z_buffer;
+    Thread_Pool* thread_pool;
     std::unique_ptr<Lighting_Model> lighting_model;
     std::vector<Tile> tiles;
     std::vector<std::vector<Triangle_Reference>> tile_bins;
@@ -83,4 +82,7 @@ private:
 
     static void DrawMeshJob(void* ctx, size_t tid);
     static void DrawTileJob(void* ctx, size_t tid);
+
+    void Render_Single(const Scene& scene);
+    void Render_Parallel(const Scene& scene);
 };
