@@ -1,6 +1,7 @@
 #pragma once
 
 #include "material/color.h"
+#include "material/texture.h"
 
 struct Projected_Vertex
 {
@@ -11,6 +12,7 @@ struct Projected_Vertex
 struct Projected_Triangle
 {
     Projected_Vertex v0, v1, v2;
+    const Texture* texture;
 };
 
 struct Triangle_Reference

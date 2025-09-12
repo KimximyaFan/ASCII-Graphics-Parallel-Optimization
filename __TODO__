@@ -2,6 +2,15 @@ thread pool 완성하기
 
 
 
+analysis
+0. remain_count atomic
+1. mutex vs backoff
+2. push and notify_one vs push after notify_all
+3. well implemented vs naive
+4. threadpool vs everyloop threading
+5. lock queue vs lock free mpmc queue
+
+GetTriangleSpace 3회/픽셀은 정확하지만 비용 큼 → 각 스캔라인에서 에지 함수를 증분 갱신하는 방식으로 크게 빨라집니다.
 
 @@
 렌더링시 discrete 하게 반짝이는거 수정, smoothe 했으면 좋겠음

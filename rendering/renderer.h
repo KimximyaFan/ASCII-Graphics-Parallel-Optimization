@@ -10,6 +10,7 @@
 #include "scene/scene.h"
 #include "culling/clipper.h"
 #include "material/texture.h"
+#include "thread/thread_pool.h"
 
 class Renderer
 {
@@ -17,7 +18,7 @@ public:
     static const Color clear_color;
     static const float clear_depth;
 
-    Renderer (int width, int height, int tile_w, int tile_h);
+    Renderer (int width, int height, int tile_w, int tile_h, Thread_Pool& pool);
 
     void ClearBuffers ();
 
@@ -29,9 +30,10 @@ public:
 
     void Render(const Scene& scene);
 
-    void Render_Parallel(const Scene& scene, int thread_count);
+    void Render_Parallel(const Scene& scene);
 
 private:
+    Thread_Pool& thread_pool;
     int width, height, tile_w, tile_h, tile_grid_width, tile_grid_height;
     Mat4x4 viewport_matrix;
     std::vector<Color> frame_buffer;
@@ -66,9 +68,7 @@ private:
 
     void AllocateTriangle();
 
-    void DrawTile(const Tile& t, const Texture* texture);
-
-    void RasterizeTriangle_Parallel (const Texture* texture);
+    void DrawTile(const Tile& t);
 
     void DrawMesh_Parallel (const std::vector<std::shared_ptr<Light>>& lights, 
                    const Vec3& camaera_pos,
@@ -79,5 +79,8 @@ private:
                    Mat4x4 M, 
                    Mat4x4 V, 
                    Mat4x4 P,
-                   int tid );
+                   size_t tid );
+
+    static void DrawMeshJob(void* ctx, size_t tid);
+    static void DrawTileJob(void* ctx, size_t tid);
 };

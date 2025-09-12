@@ -14,6 +14,7 @@
 #include "world/camera_controller.h"
 #include "world/world.h"
 #include "world/test_world.h"
+#include "thread/thread_pool.h"
 
 int main(int argc, char* argv[])
 {
@@ -23,6 +24,7 @@ int main(int argc, char* argv[])
     const int tile_h = 5;
 
     const int number_of_thread = 2;
+    const int q_capacity = 1024;
 
     Scene scene;
 
@@ -82,8 +84,10 @@ int main(int argc, char* argv[])
     }
 
     camera->SetPosition(world_info[0]->transform.position);
- 
-    Renderer renderer(width, height, tile_w, tile_h);
+    
+    Thread_Pool thread_pool(number_of_thread, q_capacity);
+
+    Renderer renderer(width, height, tile_w, tile_h, thread_pool);
     renderer.SetLightingModel(std::make_unique<Blinn_Phong>());
 
     Output_Handler output_handler(width, height);
@@ -92,7 +96,6 @@ int main(int argc, char* argv[])
     fps_counter.Start();  
 
     auto lastTime = std::chrono::high_resolution_clock::now();
-    int fps = 0;
 
     while ( true )
     {
@@ -105,7 +108,8 @@ int main(int argc, char* argv[])
         camera_controller->Update(dt);
 
         renderer.Render(scene);
-        output_handler.PrintBuffer(renderer.GetFrameBuffer(), fps);
-        fps = fps_counter.Get_Fps();
+        output_handler.PrintBuffer(renderer.GetFrameBuffer(), fps_counter.Get_Fps());
     }
+
+    thread_pool.Stop();
 }

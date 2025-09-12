@@ -4,15 +4,36 @@
 #include <algorithm>
 #include <iostream>
 
+struct DrawMesh_Context
+{
+    Renderer* renderer;
+    const std::vector<std::shared_ptr<Light>>& lights;
+    const Vec3& camera_pos;
+    const Vec3& ambient;
+    const Mesh& mesh;
+    const Clipper& clipper;
+    const Texture* texture;
+    Mat4x4 M;
+    Mat4x4 V;
+    Mat4x4 P;
+};
+
+struct DrawTile_Context
+{
+    Renderer* renderer;
+    Tile& tile;
+};
+
 const Color Renderer::clear_color = {0, 0, 0, 0};
 const float Renderer::clear_depth = 1.0f;
 
 inline int Ceil_Div(int a, int b) { return (a + b - 1) / b; }
 
-Renderer::Renderer (int w, int h, int tile_w, int tile_h)
+Renderer::Renderer (int w, int h, int tile_w, int tile_h, Thread_Pool& pool)
     : width(w), height(h), tile_w(tile_w), tile_h(tile_h),
     frame_buffer(w*h),
-    z_buffer(w*h)
+    z_buffer(w*h),
+    thread_pool(pool)
     { 
         viewport_matrix = Mat4x4::ViewportTransformation(0, w, 0, h);
         MakeTiles(tile_w, tile_h);
@@ -248,8 +269,6 @@ void Renderer::Render(const Scene& scene)
 
     Mat4x4 P = camera->GetProjMatrix();
 
-    Vec3 view_direction = camera->GetViewDirection();
-
     Vec3 camera_pos = camera->GetPosition();
 
     Clipper clipper;
@@ -337,7 +356,7 @@ void Renderer::AllocateTriangle()
     }
 }
 
-void Renderer::DrawTile(const Tile& t, const Texture* texture)
+void Renderer::DrawTile(const Tile& t)
 {
     auto& bin = tile_bins[t.id];
 
@@ -346,6 +365,7 @@ void Renderer::DrawTile(const Tile& t, const Texture* texture)
     for (const Triangle_Reference& ref : bin)
     {
         const Projected_Triangle& tri = triangles[ref.tid][ref.index];
+        const Texture* texture = tri.texture;
         const Projected_Vertex& A = tri.v0;
         const Projected_Vertex& B = tri.v1;
         const Projected_Vertex& C = tri.v2;
@@ -403,11 +423,6 @@ void Renderer::DrawTile(const Tile& t, const Texture* texture)
     }
 }
 
-void Renderer::RasterizeTriangle_Parallel(const Texture* texture)
-{
-
-}
-
 void Renderer::DrawMesh_Parallel (
     const std::vector<std::shared_ptr<Light>>& lights, 
     const Vec3& camera_pos,
@@ -418,7 +433,7 @@ void Renderer::DrawMesh_Parallel (
     Mat4x4 M, 
     Mat4x4 V, 
     Mat4x4 P,
-    int tid
+    size_t tid
 )
 {
     Mat4x4 PV = P * V;
@@ -451,7 +466,7 @@ void Renderer::DrawMesh_Parallel (
     // Clipping
     Mesh transformed_mesh = clipper.ClipMesh(out_mesh);
 
-    auto& vector = triangles[tid];
+    auto& bucket = triangles[tid];
 
     //Projection
     for (auto& v : transformed_mesh.vertices)
@@ -459,16 +474,43 @@ void Renderer::DrawMesh_Parallel (
  
     for (size_t i=0; i+2<transformed_mesh.indices.size(); i+=3) 
     {
-        Projected_Triangle triangle { ProjectVertex(transformed_mesh.vertices[transformed_mesh.indices[i+0]]),
-                                      ProjectVertex(transformed_mesh.vertices[transformed_mesh.indices[i+1]]),
-                                      ProjectVertex(transformed_mesh.vertices[transformed_mesh.indices[i+2]])};
+        Projected_Triangle triangle {
+            ProjectVertex(transformed_mesh.vertices[transformed_mesh.indices[i+0]]),                          
+            ProjectVertex(transformed_mesh.vertices[transformed_mesh.indices[i+1]]),
+            ProjectVertex(transformed_mesh.vertices[transformed_mesh.indices[i+2]]),
+            texture
+        };
 
-        vector.push_back(triangle);
-
+        bucket.push_back(triangle);
     }
 }
 
-void Renderer::Render_Parallel(const Scene& scene, int thread_count)
+void Renderer::DrawTileJob(void* ctx, size_t tid)
+{
+    auto& c = *static_cast<DrawTile_Context*>(ctx);
+
+    c.renderer->DrawTile(
+        c.tile
+    );
+}
+
+void Renderer::DrawMeshJob(void* ctx, size_t tid)
+{
+    auto& c = *static_cast<DrawMesh_Context*>(ctx);
+
+    c.renderer->DrawMesh_Parallel(
+        c.lights,
+        c.camera_pos,
+        c.ambient,
+        c.mesh,
+        c.clipper,
+        c.texture,
+        c.M, c.V, c.P,
+        tid
+    );
+}
+
+void Renderer::Render_Parallel(const Scene& scene)
 {
     ClearBuffers();
 
@@ -482,21 +524,20 @@ void Renderer::Render_Parallel(const Scene& scene, int thread_count)
 
     Mat4x4 P = camera->GetProjMatrix();
 
-    Vec3 view_direction = camera->GetViewDirection();
-
     Vec3 camera_pos = camera->GetPosition();
 
     Clipper clipper;
     clipper.ExtractFrustumPlanes(P*V);
 
-    triangles.resize(thread_count);
+    triangles.resize(thread_pool.GetThreadCount());
+    for (auto& vec : triangles) vec.clear();
 
     // 각타일의 벡터에 대해서 vector growth 최적화 가능해보임
     tile_bins.assign(tiles.size(), {});
 
     draw_list.clear();
 
-    int tid = 0;
+    size_t mesh_ctx_total = 0;
 
     // AABB Culling
     for (auto& e : scene.GetEntities() )
@@ -504,15 +545,21 @@ void Renderer::Render_Parallel(const Scene& scene, int thread_count)
         AABB world_aabb = e->GetLocalAABB().MatrixConversion(e->GetLocalToWorldMatrix());
 
         if ( clipper.IsAABBVisible(world_aabb) == true )
+        {
             draw_list.push_back(e);
+            mesh_ctx_total += e->parts.size();
+        }
     }
 
+    std::vector<DrawMesh_Context> draw_mesh_ctxs;
+    draw_mesh_ctxs.reserve(mesh_ctx_total);
 
     for ( auto& e : draw_list )
     {
         for ( auto& mesh : e->parts )
         {
-            DrawMesh_Parallel(
+            draw_mesh_ctxs.push_back( DrawMesh_Context{
+                this,
                 lights, 
                 camera_pos, 
                 ambient, 
@@ -521,11 +568,31 @@ void Renderer::Render_Parallel(const Scene& scene, int thread_count)
                 scene.GetTextureManager()->GetTexture(mesh.material->texture_handle), 
                 e->GetLocalToWorldMatrix(), 
                 V, 
-                P,
-                tid
-            );
+                P
+            });
+
+            thread_pool.PushTask(&DrawMeshJob, &draw_mesh_ctxs.back());
         }
     }
 
+    thread_pool.Start();
+    thread_pool.Wait();
+
     AllocateTriangle();
+
+    std::vector<DrawTile_Context> draw_tile_ctxs;
+    draw_tile_ctxs.reserve(tiles.size());
+
+    for ( auto& t : tiles )
+    {
+        draw_tile_ctxs.push_back( DrawTile_Context{
+            this,
+            t
+        });
+
+        thread_pool.PushTask(&DrawTileJob, &draw_tile_ctxs.back());
+    }
+
+    thread_pool.Start();
+    thread_pool.Wait();
 }

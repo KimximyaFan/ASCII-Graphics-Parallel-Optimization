@@ -18,15 +18,20 @@ struct Task
 class Thread_Pool
 {
 public:
-    explicit Thread_Pool(int thd_count, int queue_capacity);
+    explicit Thread_Pool(size_t thd_count, int queue_capacity);
     ~Thread_Pool();
 
+    size_t GetThreadCount();
+
     Task GetTask();
-    
-    void Start(Job job, void* ctx);
+    void PushTask(Job job, void* ctx);
+
+    void Start();
     void Wait();
+    void Stop();
+
 private:
-    int thread_count;
+    size_t thread_count;
     std::vector<std::thread> workers;
 
     const size_t q_capacity = 100;
@@ -40,6 +45,7 @@ private:
     std::condition_variable not_full;
     std::condition_variable done;
     std::atomic<bool> stopping{false};
+    std::atomic<bool> started{false};
 
     size_t remain_count = 0;
 
