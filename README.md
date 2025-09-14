@@ -247,7 +247,21 @@ Projected Triangle 구조체는 위 그림과 같다
 
 <img width="443" height="31" alt="image" src="https://github.com/user-attachments/assets/e88fdb98-4be5-4867-bf0e-79287fd360dc" />
 
-삼각형을 담을 자료구조는 위그림과 같다
+삼각형을 담을 자료구조는 nested vector를 이용한다
+
+<br>
+<br>
+<br>
+
+<img width="636" height="446" alt="image" src="https://github.com/user-attachments/assets/6987185a-19f1-40af-ab03-f5ec1d465bf6" />
+
+구현은 위 그림과 같다
+
+AABB 컬링 부분은 따로 빼둬서 단일 쓰레드로 진행시키고, 
+
+메시 드로잉 부분은 병렬화 한다
+
+Context는 인자들을 담는 구조체이다
 
 <br>
 <br>
