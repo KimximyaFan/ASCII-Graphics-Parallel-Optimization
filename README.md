@@ -51,7 +51,7 @@ Rasterize() 는 장면에 삼각형을 그리기이다
 
 <img width="236" height="300" alt="image" src="https://github.com/user-attachments/assets/618c3bbf-5950-4c37-b962-8bbc89367402" />
 
-현재 Render()는 main.cc 에서 while 로 지속적으로 돌아간다
+현재 Render()는 main.cc 에서 while문으로 지속적으로 돌아간다
 
 <br>
 <br>
