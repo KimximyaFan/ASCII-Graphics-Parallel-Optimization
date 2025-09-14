@@ -305,3 +305,15 @@ FPS를 구현하는 방법은 여러가지가 있다
 
 해당 함수는 매 while loop Render() 마다 실행된다
 
+
+
+![2](https://github.com/user-attachments/assets/be4e7fbd-d15f-4f25-9d3b-de468fea416c)
+
+싱글 쓰레드
+
+
+![3](https://github.com/user-attachments/assets/038f59bc-e590-43fe-b5ea-13f936ec4745)
+
+쓰레드 2개
+
+30~40% 정도의 성능 향상이 있다고 볼 수 있다
