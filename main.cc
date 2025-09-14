@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     const int tile_w = 10;
     const int tile_h = 5;
 
-    const int thread_count = 2; 
+    const int thread_count = 1; 
     const int q_capacity = 1024;
 
     Scene scene;
@@ -65,10 +65,10 @@ int main(int argc, char* argv[])
 
     /*
     std::shared_ptr<Entity> entity;
-    
-    if (true)
+     
+    if (true) 
         entity = CreateCubeEntity_Flat24_Fixed(5.0f);
-    else
+    else  
         entity = CreateCubeEntity_Fla t24_Debug(5.0f);
 
     scene.AddEntity(entity); 
@@ -111,6 +111,7 @@ int main(int argc, char* argv[])
         camera_controller->Update(dt);
 
         renderer.Render(scene);
+
         output_handler.PrintBuffer(renderer.GetFrameBuffer(), fps);
         fps = fps_counter.GetFpsAvg();
     } 

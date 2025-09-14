@@ -39,8 +39,11 @@ private:
     Thread_Pool* thread_pool;
     std::unique_ptr<Lighting_Model> lighting_model;
     std::vector<Tile> tiles;
+    
     std::vector<std::vector<Triangle_Reference>> tile_bins;
+
     std::vector<std::vector<Projected_Triangle>> triangles;
+
     std::vector<std::shared_ptr<Entity>> draw_list;
 
     Projected_Vertex ProjectVertex (const Vertex& v);

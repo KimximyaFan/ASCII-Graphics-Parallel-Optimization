@@ -24,10 +24,12 @@ public:
     size_t GetThreadCount();
 
     Task GetTask();
+    
     void PushTask(Job job, void* ctx);
 
     void Start();
     void Wait();
+
     void Stop();
 
 private:
