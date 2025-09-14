@@ -29,9 +29,9 @@ https://github.com/KimximyaFan/ASCII-Graphics-Implementation
 
 구현된 파이프라인을 도식화 해보면 위 그림과 같다
 
-Render() 는 화면 한장을 그리기
+Render() 는 화면 한장을 그리기,
 
-DrawMesh() 는 매쉬의 버텍스에 각종 처리와 투영하고 삼각형 뽑아내기
+DrawMesh() 는 P V M 및 illumniation과 projection을,
 
 Rasterize() 는 장면에 삼각형을 그리기이다
 
