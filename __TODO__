@@ -1,11 +1,29 @@
-thread pool 완성하기
+=========
+FPS 수정하기
+-> 처음에 값이 튀다가 빠르게 내려가는 현상
+-> 바로 Get FPS로 작동 안하는 현상
 
+나이브 구현
 
+2코어 4코어 8코어 ... 성능 내려가는 이유 분석
+
+AABB 컬링 시간측정 쓰기 전 후, 얼마나 효과를 가지는지
+각 요소들 시간 측정
+
+각종 변경사항들 비교분석하기
+- remain_count atomic
+- mutex vs backoff
+- push and notify_one vs push after notify_all
+- DrawMesh : Single vs Multi <- this need analysis
+- lock queue vs lock free mpmc queue
+
+=========
 
 analysis
 0. remain_count atomic
 1. mutex vs backoff
-2. push and notify_one vs push after notify_all
+2. DrawMesh : push and notify_one vs push after notify_all
+3. DrawMesh : Single vs Multi <- this need analysis
 3. well implemented vs naive
 4. threadpool vs everyloop threading
 5. lock queue vs lock free mpmc queue

@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     const int tile_w = 10;
     const int tile_h = 5;
 
-    const int thread_count = 1;
+    const int thread_count = 2; 
     const int q_capacity = 1024;
 
     Scene scene;
@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
     else
         entity = CreateCubeEntity_Fla t24_Debug(5.0f);
 
-    scene.AddEntity(entity);
+    scene.AddEntity(entity); 
     */
      
     std::unique_ptr<World> world = std::make_unique<Test_World>();
@@ -96,14 +96,12 @@ int main(int argc, char* argv[])
 
     Output_Handler output_handler(width, height);
 
-    Fps_Counter fps_counter;
-    fps_counter.Start();
- 
     auto lastTime = std::chrono::high_resolution_clock::now();
-    unsigned long long fps = 0;
- 
+    int fps = 0;
+    Fps_Counter fps_counter;
+   
     while ( true )
-    {
+    { 
         auto now   = std::chrono::high_resolution_clock::now();
         float dt   = std::chrono::duration<float>(now - lastTime).count();
         lastTime   = now;
@@ -111,12 +109,14 @@ int main(int argc, char* argv[])
         input_handler->Poll();
         if (input_handler->IsKeyDown(Key::SPACE)) break;
         camera_controller->Update(dt);
+
         renderer.Render(scene);
         output_handler.PrintBuffer(renderer.GetFrameBuffer(), fps);
-        fps = fps_counter.Get_Fps();
-    }
+        fps = fps_counter.GetFpsAvg();
+    } 
 
-    if ( thread_count >= 2) {
+    if ( thread_count >= 2)
+    {
         thread_pool->Stop();
         printf("thread clear");
     }

@@ -9,7 +9,7 @@ class Output_Handler
 public:
     Output_Handler(int w, int h);
     
-    void PrintBuffer(const std::vector<Color>& frame_buffer, unsigned long long fps);
+    void PrintBuffer(const std::vector<Color>& frame_buffer, int fps);
 
 private:
     int width;
