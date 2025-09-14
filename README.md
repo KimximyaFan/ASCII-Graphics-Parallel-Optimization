@@ -281,3 +281,27 @@ for문을 돌면서,
 
 성능 평가
 
+성능은 FPS를 기준으로 한다
+
+FPS를 구현하는 방법은 여러가지가 있다
+
+그중에 최근 1초간 그려진 프레임수를 나타내는 방법이 있는데
+
+![1](https://github.com/user-attachments/assets/3c5345b6-34e8-42ec-b59d-53adeb9616c0)
+
+해당 방법은 값이 너무 튀어서 평가하기가 너무 까다롭다
+
+그래서 
+
+그려진 프레임수 / 경과시간
+
+을 이용해서 평균 FPS를 지표로 이용하기로 한다
+
+같은 시간내에 더 많은 프레임을 그렸다면 성능이 더 좋다고 볼 수 있다
+
+<img width="366" height="131" alt="image" src="https://github.com/user-attachments/assets/0c647416-a764-4c13-b3bc-31aba6a17381" />
+
+평균 FPS 구현은 위와 같다
+
+해당 함수는 매 while loop Render() 마다 실행된다
+
