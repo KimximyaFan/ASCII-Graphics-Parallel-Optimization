@@ -20,7 +20,7 @@ public:
     void Start(int index);
     void End(int index);
     void Result() const;
-    void Ratio(int index_0, int index_1);
+    void Ratio(int index_0, int index_1) const;
 
 private:
     std::vector<Profile_Bucket> buckets;
