@@ -4,7 +4,7 @@
 
 static inline int64_t Time_Stamp() noexcept {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(
-        clock::now().time_since_epoch()
+        steady_clock::now().time_since_epoch()
     ).count();
 }
 
@@ -35,7 +35,7 @@ void Profiler::Result() const
         double avg_sec   = total_sec / static_cast<double>(b.count);
 
         printf("index : %d\n", idx);
-        printf("avg_sec : %.4f sec\n", avg_sec);
+        printf("avg_sec : %.10f sec\n", avg_sec);
         printf("total_sec : %.4f sec\n", total_sec);
         printf("count : %llu\n", b.count);
         printf("\n");
@@ -60,4 +60,9 @@ void Profiler::Ratio(int a, int b) const
     printf("avg : %.3f %%\n", avg_ratio);
     printf("total : %.3f %%\n", total_ratio);
     printf("\n");
+}
+
+int64_t Profiler::GetTotal(int index) const
+{
+    return buckets[index].total;
 }

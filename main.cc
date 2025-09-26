@@ -15,6 +15,7 @@
 #include "world/world.h"
 #include "world/test_world.h"
 #include "thread/thread_pool.h"
+#include "profiler/profiler.h"
 
 int main(int argc, char* argv[])
 {
@@ -65,12 +66,12 @@ int main(int argc, char* argv[])
 
     /*
     std::shared_ptr<Entity> entity;
-     
-    if (true) 
+      
+    if (true)  
         entity = CreateCubeEntity_Flat24_Fixed(5.0f);
     else  
         entity = CreateCubeEntity_Fla t24_Debug(5.0f);
-
+ 
     scene.AddEntity(entity); 
     */
      
@@ -90,8 +91,10 @@ int main(int argc, char* argv[])
     if ( thread_count >= 2 )
         thread_pool = std::make_unique<Thread_Pool>(thread_count, q_capacity);
 
-    Renderer renderer(width, height, tile_w, tile_h, thread_pool.get());
+    int profile_size = 12;
+    std::unique_ptr<Profiler> profiler = std::make_unique<Profiler>(profile_size);
 
+    Renderer renderer(width, height, tile_w, tile_h, thread_pool.get(), profiler.get());
     renderer.SetLightingModel(std::make_unique<Blinn_Phong>());
 
     Output_Handler output_handler(width, height);
@@ -100,6 +103,8 @@ int main(int argc, char* argv[])
     int fps = 0;
     Fps_Counter fps_counter;
    
+    printf("start\n");
+    
     while ( true )
     { 
         auto now   = std::chrono::high_resolution_clock::now();
@@ -110,11 +115,29 @@ int main(int argc, char* argv[])
         if (input_handler->IsKeyDown(Key::SPACE)) break;
         camera_controller->Update(dt);
 
-        renderer.Render(scene);
+        profiler->Start(0);
 
+        profiler->Start(1);
+        renderer.Render(scene);
+        profiler->End(1);
+
+        profiler->Start(2);
         output_handler.PrintBuffer(renderer.GetFrameBuffer(), fps);
         fps = fps_counter.GetFpsAvg();
-    } 
+        profiler->End(2);
+
+        profiler->End(0);
+
+        if ( profiler->GetTotal(0) >= 60'000'000'000 )
+            break;
+    }
+
+    output_handler.PrintClear();
+
+    profiler->Result();
+
+    int a;
+    std::cin >> a;
 
     if ( thread_count >= 2)
     {

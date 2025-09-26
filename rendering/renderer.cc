@@ -29,11 +29,12 @@ const float Renderer::clear_depth = 1.0f;
 
 inline int Ceil_Div(int a, int b) { return (a + b - 1) / b; }
 
-Renderer::Renderer (int w, int h, int tile_w, int tile_h, Thread_Pool* pool)
+Renderer::Renderer (int w, int h, int tile_w, int tile_h, Thread_Pool* pool, Profiler* profile)
 : width(w), height(h), tile_w(tile_w), tile_h(tile_h),
 frame_buffer(w*h),
 z_buffer(w*h),
-thread_pool(pool)
+thread_pool(pool),
+profiler(profile)
 { 
     viewport_matrix = Mat4x4::ViewportTransformation(0, w, 0, h);
     MakeTiles(tile_w, tile_h);
@@ -64,7 +65,7 @@ void Renderer::Render(const Scene& scene)
     if ( thread_pool )
         Render_Parallel(scene);
     else
-        Render_Single(scene);
+        Render_Single_Profile(scene);
 }
 
 void Renderer::MakeTiles(int tile_w, int tile_h)
@@ -231,18 +232,22 @@ void Renderer::DrawMesh (const std::vector<std::shared_ptr<Light>>& lights,
     Mat3x3 InverseTranspose_M = M.TopLeft3x3().InverseTranspose(); 
     Mesh out_mesh = mesh;
 
+    profiler->Start(6);
     // MC to WC
     for (size_t i=0; i<out_mesh.vertices.size(); ++i)
     {
         out_mesh.vertices[i].position = M * out_mesh.vertices[i].position;
         out_mesh.vertices[i].normal = Vec3::Normalize( InverseTranspose_M * out_mesh.vertices[i].normal );
     }
+    profiler->End(6);
 
+    profiler->Start(7);
     out_mesh = clipper.BackFaceRemoval(out_mesh, V);
-
+    profiler->End(7);
     //out_mesh = clipper.BackFaceRemoval(out_mesh, view_direction);
     //out_mesh = clipper.BackFaceRemoval2(out_mesh, V);
 
+    profiler->Start(8);
     // Illumniation
     for (size_t i=0; i<out_mesh.vertices.size(); ++i)
     {
@@ -256,14 +261,20 @@ void Renderer::DrawMesh (const std::vector<std::shared_ptr<Light>>& lights,
             ambient
         );
     }
+    profiler->End(8);
 
+    profiler->Start(9);
     // Clipping
     Mesh transformed_mesh = clipper.ClipMesh(out_mesh);
+    profiler->End(9);
 
+    profiler->Start(10);
     //Projection
     for (auto& v : transformed_mesh.vertices)
         v.position = PV * v.position;
- 
+    profiler->End(10);
+
+    profiler->Start(11);
     for (size_t i=0; i+2<transformed_mesh.indices.size(); i+=3) 
     {
         RasterizeTriangle(transformed_mesh.vertices[transformed_mesh.indices[i+0]], 
@@ -271,6 +282,7 @@ void Renderer::DrawMesh (const std::vector<std::shared_ptr<Light>>& lights,
                           transformed_mesh.vertices[transformed_mesh.indices[i+2]],
                           texture);
     }
+    profiler->End(11);
 }
 
 void Renderer::Render_Single(const Scene& scene)
@@ -307,6 +319,60 @@ void Renderer::Render_Single(const Scene& scene)
     }
 }
 
+void Renderer::Render_Single_Profile(const Scene& scene)
+{
+    profiler->Start(3);
+    ClearBuffers();
+
+    std::vector<std::shared_ptr<Light>> lights = scene.GetLightManager()->GetLights();
+
+    Vec3 ambient = scene.GetLightManager()->GetAmbient();
+
+    std::shared_ptr<Camera> camera = scene.GetCamera();
+
+    Mat4x4 V = camera->GetViewMatrix();
+
+    Mat4x4 P = camera->GetProjMatrix();
+
+    Vec3 camera_pos = camera->GetPosition();
+
+    Clipper clipper;
+    clipper.ExtractFrustumPlanes(P*V);
+
+    draw_list.clear();
+    profiler->End(3);
+
+    profiler->Start(4);
+    // AABB Culling
+    for (auto& e : scene.GetEntities() )
+    {
+        AABB world_aabb = e->GetLocalAABB().MatrixConversion(e->GetLocalToWorldMatrix());
+
+        if ( clipper.IsAABBVisible(world_aabb) == true )
+        {
+            draw_list.push_back(e);
+        }
+    }
+    profiler->End(4);
+
+    profiler->Start(5);
+    for ( auto& e : draw_list )
+    {
+        for ( auto& mesh : e->parts )
+        {
+            DrawMesh(
+                lights, 
+                camera_pos, 
+                ambient, 
+                mesh, 
+                clipper, 
+                scene.GetTextureManager()->GetTexture(mesh.material->texture_handle), 
+                e->GetLocalToWorldMatrix(), V, P
+            );
+        }
+    }
+    profiler->End(5);
+}
 
 
 /*

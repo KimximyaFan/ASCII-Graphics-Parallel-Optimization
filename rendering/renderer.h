@@ -11,6 +11,7 @@
 #include "culling/clipper.h"
 #include "material/texture.h"
 #include "thread/thread_pool.h"
+#include "profiler/profiler.h"
 
 class Renderer
 {
@@ -19,7 +20,7 @@ public:
     static const float clear_depth;
 
     Renderer (int width, int height, int tile_w, int tile_h);
-    Renderer (int width, int height, int tile_w, int tile_h, Thread_Pool* pool);
+    Renderer (int width, int height, int tile_w, int tile_h, Thread_Pool* pool, Profiler* profiler);
 
     void ClearBuffers ();
 
@@ -39,6 +40,8 @@ private:
     Thread_Pool* thread_pool;
     std::unique_ptr<Lighting_Model> lighting_model;
     std::vector<Tile> tiles;
+
+    Profiler* profiler;
     
     std::vector<std::vector<Triangle_Reference>> tile_bins;
 
@@ -87,5 +90,6 @@ private:
     static void DrawTileJob(void* ctx, size_t tid);
 
     void Render_Single(const Scene& scene);
+    void Render_Single_Profile(const Scene& scene);
     void Render_Parallel(const Scene& scene);
 };

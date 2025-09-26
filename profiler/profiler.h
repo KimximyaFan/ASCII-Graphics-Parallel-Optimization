@@ -3,7 +3,7 @@
 #include <chrono>
 #include <vector>
 
-using clock = std::chrono::steady_clock;
+using steady_clock = std::chrono::steady_clock;
 
 struct Profile_Bucket
 {
@@ -21,6 +21,7 @@ public:
     void End(int index);
     void Result() const;
     void Ratio(int index_0, int index_1) const;
+    int64_t GetTotal(int index) const;
 
 private:
     std::vector<Profile_Bucket> buckets;
