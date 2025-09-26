@@ -41,3 +41,28 @@ void Output_Handler::PrintBuffer(const std::vector<Color>& frame_buffer, int fps
         );
     }
 }
+
+void Output_Handler::PrintClear()
+{
+    char buf[height+2][width];
+
+    for (int y = 0; y < height; ++y)
+    {
+        for (int x = 0; x < width; ++x)
+        {
+            buf[y][x] = ' ';
+        }
+    }
+
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    for (int y = 0; y < height; ++y) {
+        DWORD written;
+        WriteConsoleOutputCharacterA(
+            hConsole,
+            buf[y],
+            width,
+            {0, (SHORT)y},
+            &written
+        );
+    }
+}

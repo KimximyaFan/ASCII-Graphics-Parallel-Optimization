@@ -10,6 +10,7 @@ public:
     Output_Handler(int w, int h);
     
     void PrintBuffer(const std::vector<Color>& frame_buffer, int fps);
+    void PrintClear();
 
 private:
     int width;
