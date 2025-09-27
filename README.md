@@ -180,7 +180,7 @@ Clipping 연산이 무거워서 AABB Culling이 효율적인 프로세스임을 
 
 첫 번째 방식은, 그냥 시스템콜만 1회로 줄이는 것, 이를 Fast라고 하자
 
-두 번째 방식은, Virtual Terminal 모드를 켜서 WinAPI 호출을 피할 수 있다, 이를 VT라고 하자
+두 번째 방식은, 시스템콜을 1회로 줄이면서, Virtual Terminal 모드를 켜서 WinAPI 호출을 피할 수 있다, 이를 VT라고 하자
 
 <img width="573" height="107" alt="image" src="https://github.com/user-attachments/assets/aeea7c22-cea8-44f8-ba0c-2489e6ca2fb7" />
 
