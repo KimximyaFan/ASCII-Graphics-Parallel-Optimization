@@ -230,7 +230,7 @@ Fast와 VT 방식 둘 다 성능개선이 이루어졌으며
 
 <br>
 
-위 그래프는, 각 print 방식별 render와 printbuffer 의 총시간 그래프를 나타낸다
+위 그래프는, 각 방식별 render와 printbuffer 의 총시간 그래프를 나타낸다
 
 VT 방식을 이용하게 되면 IO 오버헤드가 크게 줄고, 
 
