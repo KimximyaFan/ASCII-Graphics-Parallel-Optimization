@@ -178,17 +178,17 @@ Clipping 연산이 무거워서 AABB Culling이 효율적인 프로세스임을 
 <br>
 <br>
 
-<img width="573" height="107" alt="image" src="https://github.com/user-attachments/assets/aeea7c22-cea8-44f8-ba0c-2489e6ca2fb7" />
-
 2가지 수정 방안 존재한다
 
 첫 번째 방식은, 그냥 시스템콜만 1회로 줄이는 것, 이를 Fast라고 하자
 
 두 번째 방식은, Virtual Terminal 모드를 켜서 WinAPI 호출을 피할 수 있다, 이를 VT라고 하자
 
+<img width="573" height="107" alt="image" src="https://github.com/user-attachments/assets/aeea7c22-cea8-44f8-ba0c-2489e6ca2fb7" />
+
 최종적으로, 
 
-기존방식인 Normal 과 수정 방안인 Fast와 VT 를 이용, 세가지 방식으로 성능 비교를 해본다
+Normal, Fast, VT 세가지 방식으로 성능 비교를 해본다
 
 측정 결과는 다음과 같다
 
@@ -198,7 +198,7 @@ Clipping 연산이 무거워서 AABB Culling이 효율적인 프로세스임을 
 
 <img width="248" height="176" alt="normal" src="https://github.com/user-attachments/assets/a869cfe9-b1a8-441d-b494-e5c1bbb692e6" />
 
-Noraml
+Normal
 
 <br>
 
