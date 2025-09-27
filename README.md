@@ -71,6 +71,8 @@ start() 때 시간 기록하고, end() 때 현재시간에 start했던 시간을
 
 ### 측정 결과
 
+<br>
+
 엄밀한 벤치마크는 까다로우므로, 일단 나이브하게 경향성을 파악하기로 한다
 
 60초간 프로그램을 돌리고 그 과정속에서 핵심 로직의 시간을 측정하였다
@@ -80,6 +82,8 @@ start() 때 시간 기록하고, end() 때 현재시간에 start했던 시간을
 <img width="525" height="564" alt="try_0" src="https://github.com/user-attachments/assets/bc4ce9ae-659e-4964-83f9-477958099ace" />
 
 시행 1
+
+<br>
 
 <img width="540" height="561" alt="try_1" src="https://github.com/user-attachments/assets/df400bbd-c98d-4973-a59a-0fa2440fd47d" />
 
@@ -97,7 +101,11 @@ start() 때 시간 기록하고, end() 때 현재시간에 start했던 시간을
 
 측정 결과, 렌더링보다 콘솔 IO 오버헤드가 엄청 큼을 알 수 있다
 
-거의 2배 가까이 시간을 잡아먹는데, 이는 렌더링쪽 최적화보다 IO 오버헤드를 줄이는게 성능향상에 효과적임을 의미한다
+거의 2배 가까이 시간을 잡아먹는데, 
+
+당장 렌더링쪽 최적화보다 
+
+IO 오버헤드를 줄이는게 성능향상에 효과적임을 의미한다
 
 <br>
 <br>
@@ -107,7 +115,9 @@ start() 때 시간 기록하고, end() 때 현재시간에 start했던 시간을
 
 위 그림은 Render() 함수 내의 시간 비율을 나타낸 그래프이다
 
-특징적인 점은, AABB Culling의 시간이 엄청 작다는 점이고, 컬링에 매우 효과적으로 작동함을 알 수 있다 
+특징적인 점은, AABB Culling의 시간이 엄청 작다는 점이고, 
+
+컬링이 매우 효과적으로 작동함을 알 수 있다 
 
 <br>
 <br>
@@ -117,9 +127,9 @@ start() 때 시간 기록하고, end() 때 현재시간에 start했던 시간을
 
 위 그림은 DrawMesh() 함수 내의 시간 비율을 나타낸 그래프이다
 
-Rasterize의 Clipping의 시간이 크게 잡힌다
+Rasterize와 Clipping의 시간이 크게 잡힌다
 
-Clipping 연산이 비교적 무거우며, AABB Culling이 효과적임을 알 수 있고,
+Clipping 연산이 무거워서 AABB Culling이 효율적인 프로세스임을 알 수 있고,
 
 그리고
 
@@ -131,13 +141,15 @@ Clipping 연산이 비교적 무거우며, AABB Culling이 효과적임을 알 �
 
 ### 최적화 방향성
 
+<br>
+
 측정결과를 토대로, 최적화 방향성을 잡을수 있다
 
 일단 IO 오버헤드를 줄이는 것이 제일 최우선이고,
 
 그 후, DrawMesh, Rasterize, Clipping 쪽을 건드려보는게 좋음을 알 수 있다
 
-파이프라인은 병렬화를 통해서 최적화를 해보기로 한다 
+렌더링 쪽은 병렬화를 통해서 최적화를 해보기로 한다 
 
 <br>
 <br>
@@ -148,13 +160,15 @@ Clipping 연산이 비교적 무거우며, AABB Culling이 효과적임을 알 �
 
 ## PrintBuffer 최적화
 
-현재 콘솔에 문자를 찍어주는 일은 Output_Handler 가 하고 있다
+<br>
+
+현재 콘솔에 문자를 찍어주는 일은 Output_Handler를 통해 PrintBuffer() 함수를 실행해서 하고 있다
 
 <img width="397" height="220" alt="image" src="https://github.com/user-attachments/assets/b66added-6442-4b25-8353-f3402ca88f8d" />
 
-PrintBuffer() 함수로 문자를 찍는데, 해당 함수의 핵심은 위 그림과 같다
+해당 함수의 핵심은 그림과 같다
 
-해당 구현의 문제점은 height 수 만큼 시스템콜을 하게 된다는 것이고
+위 구현의 문제점은 height 수 만큼 시스템콜을 하게 된다는 것이고
 
 엄청난 커널 전환 오버헤드가 생기게 된다
 
@@ -202,6 +216,8 @@ VT
 
 <img width="605" height="298" alt="8" src="https://github.com/user-attachments/assets/90261a1d-14de-4e9b-b12a-8518cc59bac5" />
 
+<br>
+
 함수 평균 실행시간을 비교해보면,
 
 Fast와 VT 방식 둘 다 성능개선이 이루어졌으며
@@ -213,6 +229,8 @@ Fast와 VT 방식 둘 다 성능개선이 이루어졌으며
 <br>
 
 <img width="580" height="299" alt="9" src="https://github.com/user-attachments/assets/8fa37471-b784-4ec4-bba3-17fbf58fcc42" />
+
+<br>
 
 위 그래프는, 각 print 방식별 render와 printbuffer 의 총시간 그래프를 나타낸다
 
