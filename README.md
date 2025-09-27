@@ -21,11 +21,9 @@ https://github.com/KimximyaFan/ASCII-Graphics-Implementation
 ## 타임 프로파일링
 
 <br>
-<br>
 
 파이프라인의 핵심 부분에 대해서 시간측정을 하고, 최적화 계획을 세운다
 
-<br>
 <br>
 <br>
 
@@ -81,7 +79,13 @@ start() 때 시간 기록하고, end() 때 현재시간에 start했던 시간을
 
 <img width="525" height="564" alt="try_0" src="https://github.com/user-attachments/assets/bc4ce9ae-659e-4964-83f9-477958099ace" />
 
+시행 1
+
 <img width="540" height="561" alt="try_1" src="https://github.com/user-attachments/assets/df400bbd-c98d-4973-a59a-0fa2440fd47d" />
+
+시행 2
+
+<br>
 
 일단 결과를 평균 내었다
 
