@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <vector>
+#include <string>
 
 using steady_clock = std::chrono::steady_clock;
 
@@ -25,4 +26,8 @@ public:
 
 private:
     std::vector<Profile_Bucket> buckets;
+    std::string index_name[20];
+
+    void IndexNameInit();
 };
+

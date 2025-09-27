@@ -8,7 +8,27 @@ static inline int64_t Time_Stamp() noexcept {
     ).count();
 }
 
-Profiler::Profiler(int size) : buckets(size) {}
+Profiler::Profiler(int size) : buckets(size)
+{
+    IndexNameInit();
+}
+
+void Profiler::IndexNameInit()
+{
+    int count = 0;
+    index_name[count++] = "Total";
+    index_name[count++] = "Render";
+    index_name[count++] = "PrintBuffer";
+    index_name[count++] = "Scene Information";
+    index_name[count++] = "AABB Culling";
+    index_name[count++] = "DrawMesh";
+    index_name[count++] = "MC to WC";
+    index_name[count++] = "Back Face Removal";
+    index_name[count++] = "Shade";
+    index_name[count++] = "Clipping";
+    index_name[count++] = "PV Projection";
+    index_name[count++] = "Rasterize";
+}
 
 void Profiler::Start(int index)
 {
@@ -34,7 +54,7 @@ void Profiler::Result() const
         double total_sec = static_cast<double>(b.total) / 1'000'000'000.0;
         double avg_sec   = total_sec / static_cast<double>(b.count);
 
-        printf("index : %d\n", idx);
+        printf("%s\n", index_name[idx].c_str());
         printf("avg_sec : %.10f sec\n", avg_sec);
         printf("total_sec : %.4f sec\n", total_sec);
         printf("count : %llu\n", b.count);

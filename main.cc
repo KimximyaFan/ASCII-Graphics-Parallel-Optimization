@@ -67,11 +67,11 @@ int main(int argc, char* argv[])
     /*
     std::shared_ptr<Entity> entity;
       
-    if (true)  
+    if (true)   qqqqqqqqqqqqqq qqqqqqq 
         entity = CreateCubeEntity_Flat24_Fixed(5.0f);
-    else  
+    else 
         entity = CreateCubeEntity_Fla t24_Debug(5.0f);
- 
+  
     scene.AddEntity(entity); 
     */
      
@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
     Renderer renderer(width, height, tile_w, tile_h, thread_pool.get(), profiler.get());
     renderer.SetLightingModel(std::make_unique<Blinn_Phong>());
 
-    Output_Handler output_handler(width, height);
+    Output_Handler output_handler(width, height, Print_Type::NORMAL);
 
     auto lastTime = std::chrono::high_resolution_clock::now();
     int fps = 0;
@@ -106,7 +106,8 @@ int main(int argc, char* argv[])
     printf("start\n");
     
     while ( true )
-    { 
+    {
+        profiler->Start(0);
         auto now   = std::chrono::high_resolution_clock::now();
         float dt   = std::chrono::duration<float>(now - lastTime).count();
         lastTime   = now;
@@ -115,16 +116,15 @@ int main(int argc, char* argv[])
         if (input_handler->IsKeyDown(Key::SPACE)) break;
         camera_controller->Update(dt);
 
-        profiler->Start(0);
-
         profiler->Start(1);
         renderer.Render(scene);
         profiler->End(1);
 
         profiler->Start(2);
         output_handler.PrintBuffer(renderer.GetFrameBuffer(), fps);
-        fps = fps_counter.GetFpsAvg();
         profiler->End(2);
+        fps = fps_counter.GetFpsAvg();
+        
 
         profiler->End(0);
 

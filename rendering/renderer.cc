@@ -342,8 +342,8 @@ void Renderer::Render_Single_Profile(const Scene& scene)
     draw_list.clear();
     profiler->End(3);
 
-    profiler->Start(4);
     // AABB Culling
+    profiler->Start(4);
     for (auto& e : scene.GetEntities() )
     {
         AABB world_aabb = e->GetLocalAABB().MatrixConversion(e->GetLocalToWorldMatrix());
@@ -355,6 +355,7 @@ void Renderer::Render_Single_Profile(const Scene& scene)
     }
     profiler->End(4);
 
+    //Draw Mesh
     profiler->Start(5);
     for ( auto& e : draw_list )
     {
