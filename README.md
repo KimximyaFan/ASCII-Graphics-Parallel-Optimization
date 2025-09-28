@@ -99,7 +99,7 @@ start() 때 시간 기록하고, end() 때 현재시간에 start했던 시간을
 
 <img width="497" height="292" alt="5" src="https://github.com/user-attachments/assets/0b7cab16-9b29-4f77-b0b1-80e21d220cc4" />
 
-측정 결과, 렌더링보다 콘솔 IO 오버헤드가 엄청 큼을 알 수 있다
+측정 결과, 콘솔 IO 오버헤드가 엄청 큼을 알 수 있다
 
 거의 2배 가까이 시간을 잡아먹는데, 
 
@@ -113,7 +113,7 @@ IO 오버헤드를 줄이는게 성능향상에 효과적임을 의미한다
 
 <img width="528" height="292" alt="6" src="https://github.com/user-attachments/assets/553e6a59-8a17-439a-a5b5-cbb2500512d7" />
 
-위 그림은 Render() 함수 내의 시간 비율을 나타낸 그래프이다
+위 그림은 Render() 함수 내의 시간을 나타낸 그래프이다
 
 특징적인 점은, AABB Culling의 시간이 엄청 작다는 점이다
 
@@ -123,7 +123,7 @@ IO 오버헤드를 줄이는게 성능향상에 효과적임을 의미한다
 
 <img width="727" height="299" alt="7" src="https://github.com/user-attachments/assets/a0c4f3e0-564f-40e4-a18b-c84b7c26ba0d" />
 
-위 그림은 DrawMesh() 함수 내의 시간 비율을 나타낸 그래프이다
+위 그림은 DrawMesh() 함수 내의 시간을 나타낸 그래프이다
 
 Rasterize와 Clipping의 시간이 크게 잡힌다
 
