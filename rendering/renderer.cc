@@ -232,22 +232,22 @@ void Renderer::DrawMesh (const std::vector<std::shared_ptr<Light>>& lights,
     Mat3x3 InverseTranspose_M = M.TopLeft3x3().InverseTranspose(); 
     Mesh out_mesh = mesh;
 
-    profiler->Start(6);
+    //profiler->Start(6);
     // MC to WC
     for (size_t i=0; i<out_mesh.vertices.size(); ++i)
     {
         out_mesh.vertices[i].position = M * out_mesh.vertices[i].position;
         out_mesh.vertices[i].normal = Vec3::Normalize( InverseTranspose_M * out_mesh.vertices[i].normal );
     }
-    profiler->End(6);
+    //profiler->End(6);
 
-    profiler->Start(7);
+    //profiler->Start(7);
     out_mesh = clipper.BackFaceRemoval(out_mesh, V);
-    profiler->End(7);
+    //profiler->End(7);
     //out_mesh = clipper.BackFaceRemoval(out_mesh, view_direction);
     //out_mesh = clipper.BackFaceRemoval2(out_mesh, V);
 
-    profiler->Start(8);
+    //profiler->Start(8);
     // Illumniation
     for (size_t i=0; i<out_mesh.vertices.size(); ++i)
     {
@@ -261,20 +261,20 @@ void Renderer::DrawMesh (const std::vector<std::shared_ptr<Light>>& lights,
             ambient
         );
     }
-    profiler->End(8);
+    //profiler->End(8);
 
-    profiler->Start(9);
+    //profiler->Start(9);
     // Clipping
     Mesh transformed_mesh = clipper.ClipMesh(out_mesh);
-    profiler->End(9);
+    //profiler->End(9);
 
-    profiler->Start(10);
+    //profiler->Start(10);
     //Projection
     for (auto& v : transformed_mesh.vertices)
         v.position = PV * v.position;
-    profiler->End(10);
+    //profiler->End(10);
 
-    profiler->Start(11);
+    //profiler->Start(11);
     for (size_t i=0; i+2<transformed_mesh.indices.size(); i+=3) 
     {
         RasterizeTriangle(transformed_mesh.vertices[transformed_mesh.indices[i+0]], 
@@ -282,7 +282,7 @@ void Renderer::DrawMesh (const std::vector<std::shared_ptr<Light>>& lights,
                           transformed_mesh.vertices[transformed_mesh.indices[i+2]],
                           texture);
     }
-    profiler->End(11);
+    //profiler->End(11);
 }
 
 void Renderer::Render_Single(const Scene& scene)
@@ -321,7 +321,7 @@ void Renderer::Render_Single(const Scene& scene)
 
 void Renderer::Render_Single_Profile(const Scene& scene)
 {
-    profiler->Start(3);
+    //profiler->Start(3);
     ClearBuffers();
 
     std::vector<std::shared_ptr<Light>> lights = scene.GetLightManager()->GetLights();
@@ -340,10 +340,10 @@ void Renderer::Render_Single_Profile(const Scene& scene)
     clipper.ExtractFrustumPlanes(P*V);
 
     draw_list.clear();
-    profiler->End(3);
+    //profiler->End(3);
 
     // AABB Culling
-    profiler->Start(4);
+    //profiler->Start(4);
     for (auto& e : scene.GetEntities() )
     {
         AABB world_aabb = e->GetLocalAABB().MatrixConversion(e->GetLocalToWorldMatrix());
@@ -353,10 +353,10 @@ void Renderer::Render_Single_Profile(const Scene& scene)
             draw_list.push_back(e);
         }
     }
-    profiler->End(4);
+    //profiler->End(4);
 
     //Draw Mesh
-    profiler->Start(5);
+    //profiler->Start(5);
     for ( auto& e : draw_list )
     {
         for ( auto& mesh : e->parts )
@@ -372,7 +372,7 @@ void Renderer::Render_Single_Profile(const Scene& scene)
             );
         }
     }
-    profiler->End(5);
+    //profiler->End(5);
 }
 
 

@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     const int tile_w = 10;
     const int tile_h = 5;
 
-    const int thread_count = 1; 
+    const int thread_count = 8;
     const int q_capacity = 1024;
 
     Scene scene;
@@ -66,10 +66,10 @@ int main(int argc, char* argv[])
 
     /*
     std::shared_ptr<Entity> entity;
-      
-    if (true)   qqqqqqqqqqqqqq qqqqqqq 
-        entity = CreateCubeEntity_Flat24_Fixed(5.0f);
-    else 
+
+    if (true)
+        entity = ateCubeEntity_Flat24_Fixed(5.0f);
+    else
         entity = CreateCubeEntity_Fla t24_Debug(5.0f);
   
     scene.AddEntity(entity); 
@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
     Renderer renderer(width, height, tile_w, tile_h, thread_pool.get(), profiler.get());
     renderer.SetLightingModel(std::make_unique<Blinn_Phong>());
 
-    Output_Handler output_handler(width, height, Print_Type::NORMAL);
+    Output_Handler output_handler(width, height, Print_Type::VT);
 
     auto lastTime = std::chrono::high_resolution_clock::now();
     int fps = 0;
