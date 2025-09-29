@@ -665,57 +665,85 @@ for문을 돌면서,
 <br>
 <br>
 <br>
-<br>
 
-## 성능 평가
-
-성능은 FPS를 기준으로 한다
-
-FPS를 구현하는 방법은 여러가지가 있다
-
-그중에 최근 1초간 그려진 프레임수를 나타내는 방법이 있는데
+### 성능 평가
 
 <br>
-<br>
-<br>
 
-![1](https://github.com/user-attachments/assets/3c5345b6-34e8-42ec-b59d-53adeb9616c0)
+1분간 렌더링 돌려보고
 
-해당 방법은 값이 너무 튀어서 평가하기가 너무 까다롭다
+한장 렌더링 하는데 걸리는 평균시간을 지표로 한다
 
-그래서,
+단일쓰레드, 2쓰레드, 4쓰레드, 8쓰레드로 각각 5번씩 테스트 했다
 
-(그려진 프레임수) / 경과시간
+결과는 다음과 같다
 
-을 이용해서 평균 FPS를 지표로 이용하기로 한다
+<img width="253" height="210" alt="1_thd" src="https://github.com/user-attachments/assets/09008b68-4040-4b05-be1a-cd57e05f8a1d" />
 
-같은 시간내에 더 많은 프레임을 그렸다면 성능이 더 좋다고 볼 수 있다
+단일쓰레드
 
 <br>
-<br>
-<br>
 
-<img width="366" height="131" alt="image" src="https://github.com/user-attachments/assets/0c647416-a764-4c13-b3bc-31aba6a17381" />
+<img width="246" height="198" alt="2_thd" src="https://github.com/user-attachments/assets/029abf2c-877f-4bb7-99d0-73b690736c87" />
 
-평균 FPS 구현은 위와 같다
-
-해당 함수는 매 while loop Render() 마다 실행된다
+2쓰레드
 
 <br>
-<br>
+
+<img width="246" height="211" alt="4_thd" src="https://github.com/user-attachments/assets/feab3f5f-73dc-4282-baec-2b59e2152731" />
+
+4쓰레드
+
 <br>
 
-![2](https://github.com/user-attachments/assets/be4e7fbd-d15f-4f25-9d3b-de468fea416c)
+<img width="251" height="224" alt="8_thd" src="https://github.com/user-attachments/assets/ef53bdea-21f5-4787-aa88-f1746795c944" />
 
-싱글 쓰레드
+8쓰레드
 
 <br>
 <br>
 <br>
 
+<img width="911" height="645" alt="10" src="https://github.com/user-attachments/assets/441151d8-9bb8-49dc-bd37-cd158c2b5041" />
 
-![3](https://github.com/user-attachments/assets/038f59bc-e590-43fe-b5ea-13f936ec4745)
+2쓰레드와 4쓰레드 그래프를 보면
 
-쓰레드 2개
+스케쥴링 영향으로 보이는, 값이 튀는 성능이 나올 때가 있다
 
-30~40% 정도의 성능 향상이 있다고 볼 수 있다
+그러나 경향성에 영향을 주지는 않아서 데이터에 제외 하지 않았다
+
+대략적으로, 단일쓰레드보다는 2쓰레드 4쓰레드가 성능이 좋게 나오고, 8 쓰레드에서 오히려 성능이 떨어진다
+
+<br>
+<br>
+<br>
+
+<img width="566" height="323" alt="11" src="https://github.com/user-attachments/assets/f91cbf5d-09d9-4ae9-864a-480006823365" />
+
+각 쓰레드별 결과를 평균낸 그래프이다
+
+멀티쓰레드가 확실하게 성능이 괜찮으므로, 
+
+렌더링 파이프라인 병렬화는 나름 성공적이라 볼 수 있다
+
+제일 성능이 좋게나온 4쓰레드 같은경우, 단일에 비해 1.6배 빠르다
+
+그런데 실행 환경은 i7-13620H CPU를 썼는데,
+
+해당 프로세서는 10코어 / 16스레드 구조이므로, 
+
+이론상 8쓰레드도 성능이 괜찮게 나와야한다
+
+쓰레드 수가 많아질 수록 락경쟁, 컨텍스트 스위치 오버헤드등이 커지겠지만
+
+각종 수정을 통해 8 쓰레드 성능도 좋게 나오는 걸 목표로 잡아보도록 한다
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+## 현 구현된 병렬화 코드에 시도 해볼만한 수정사항들
+
